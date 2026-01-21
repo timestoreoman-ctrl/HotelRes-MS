@@ -1,0 +1,47 @@
+services:
+  mysql-booking:
+    image: mysql:8.0
+    container_name: mysql-booking
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bookingdb
+    ports:
+      - "3308:3306"
+    volumes:
+      - bookingdb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin-booking:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin-booking
+    depends_on:
+      - mysql-booking
+    environment:
+      PMA_HOST: mysql-booking
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8081:80"
+
+  booking-service:
+    build: .
+    container_name: booking-service
+    depends_on:
+      mysql-booking:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-booking:3306/bookingdb?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 9002
+    ports:
+      - "9002:9002"
+
+volumes:
+  bookingdb_data:

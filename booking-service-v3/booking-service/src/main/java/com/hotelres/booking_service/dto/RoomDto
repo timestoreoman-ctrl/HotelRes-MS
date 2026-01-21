@@ -1,0 +1,27 @@
+package com.hotelres.booking_service.dto;
+
+public class RoomDto {
+
+    private Long id;
+    private String type;
+    private Integer roomNumber;
+    private Double price;
+    private Boolean available;
+
+    public RoomDto() {}
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public Integer getRoomNumber() { return roomNumber; }
+    public void setRoomNumber(Integer roomNumber) { this.roomNumber = roomNumber; }
+
+    public Double getPrice() { return price; }
+    public void setPrice(Double price) { this.price = price; }
+
+    public Boolean isAvailable() { return available; }
+    public void setAvailable(Boolean available) { this.available = available; }
+}

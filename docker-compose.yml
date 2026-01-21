@@ -1,0 +1,133 @@
+services:
+  # ---------- ROOM DB ----------
+  mysql-room:
+    image: mysql:8
+    container_name: mysql-room
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: roomdb
+    ports:
+      - "3307:3306"
+    volumes:
+      - roomdb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 10
+
+  phpmyadmin-room:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin-room
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql-room
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      mysql-room:
+        condition: service_healthy
+
+  # ---------- ROOM SERVICE (FORCED 9001) ----------
+  room-service:
+    build:
+      context: ./room-service/room-service
+    container_name: room-service
+    ports:
+      - "9001:9001"
+    environment:
+      SERVER_PORT: 9001
+      SPRING_APPLICATION_NAME: room-service
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-room:3306/roomdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      mysql-room:
+        condition: service_healthy
+
+  # ---------- BOOKING DB ----------
+  mysql-booking:
+    image: mysql:8
+    container_name: mysql-booking
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bookingdb
+    ports:
+      - "3308:3306"
+    volumes:
+      - bookingdb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 10
+
+  phpmyadmin-booking:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin-booking
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql-booking
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      mysql-booking:
+        condition: service_healthy
+
+  # ---------- BOOKING SERVICE (FORCED 9002) ----------
+  booking-service:
+    build:
+      context: ./booking-service/booking-service
+    container_name: booking-service
+    ports:
+      - "9002:9002"
+    environment:
+      SERVER_PORT: 9002
+      SPRING_APPLICATION_NAME: booking-service
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-booking:3306/bookingdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      mysql-booking:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: ./api-gateway/api-gateway
+      dockerfile: ../Dockerfile
+    container_name: api-gateway
+    ports:
+      - "9000:9000"
+    depends_on:
+      - discovery-server
+      - room-service
+      - booking-service
+
+  discovery-server:
+    build:
+      context: ./discovery-server/discovery-server
+    container_name: discovery-server
+    ports:
+      - "9011:9011"
+    environment:
+      SERVER_PORT: "9011"
+      SPRING_APPLICATION_NAME: discovery-server
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+      # مش ضروري للـ server بس موجود كقيمة واضحة
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:9011/eureka/
+  config-server:
+    build:
+      context: ./config-server/config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_APPLICATION_NAME: config-server
+      SERVER_PORT: 8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:9011/eureka
+    depends_on:
+      - discovery-server
+volumes:
+  roomdb_data:
+  bookingdb_data:
